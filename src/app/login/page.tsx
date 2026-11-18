@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
@@ -13,18 +12,18 @@ export default function LoginPage() {
     if (fout) setError(`Inloggen is niet gelukt: ${fout}`);
   }, []);
 
-  async function signIn() {
+  function signIn() {
     setBusy(true);
     setError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
+    // Bewust zonder PKCE: op mobiel opent LinkedIn vaak de eigen app en komt de gebruiker
+    // in een andere browser terug, waar de PKCE-sleutel ontbreekt. Deze flow levert de
+    // sessie direct terug in de URL en werkt daardoor in elke browser.
+    const params = new URLSearchParams({
       provider: "linkedin_oidc",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      redirect_to: `${window.location.origin}/auth/confirm`,
     });
-    if (error) {
-      setError("Inloggen via LinkedIn lukte niet. Probeer het opnieuw.");
-      setBusy(false);
-    }
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- externe Supabase-URL
+    window.location.href = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/authorize?${params}`;
   }
 
   return (
