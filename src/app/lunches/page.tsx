@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Avatar from "@/components/Avatar";
 import { PROMPTS } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
-import { formatSlot } from "@/lib/time";
+import { allSlots, formatSlot } from "@/lib/time";
 import type { LunchStatus, PublicProfile, Restaurant } from "@/lib/types";
 import { LunchButtons } from "./LunchButtons";
 
@@ -35,6 +35,13 @@ export default async function LunchesPage() {
     .gte("starts_at", new Date().toISOString())
     .order("starts_at");
   const list = (lunches ?? []) as Lunch[];
+  const { data: myAvail } = await supabase
+    .from("availability")
+    .select("starts_at")
+    .eq("user_id", user.id)
+    .gte("starts_at", new Date().toISOString());
+  const mySlots = (myAvail ?? []).map((a) => new Date(a.starts_at).toISOString());
+  const options = allSlots();
 
   const otherIds = [...new Set(list.map((l) => (l.from_user === user.id ? l.to_user : l.from_user)))];
   const restoIds = [...new Set(list.map((l) => l.restaurant_id).filter(Boolean))] as number[];
@@ -62,12 +69,15 @@ export default async function LunchesPage() {
             {formatSlot(l.starts_at)}
             {r ? ` · ${r.name}, ${r.area}` : ""}
           </div>
+          {kind === "incoming" && !mySlots.includes(new Date(l.starts_at).toISOString()) && (
+            <span className="warn">Staat niet in je agenda — ga akkoord of stel een ander moment voor</span>
+          )}
           {kind === "incoming" && l.prompt_index != null && (
             <small>Reageerde op jouw antwoord bij “{PROMPTS[l.prompt_index]}”</small>
           )}
         </div>
         <span className={`status ${l.status === "gereserveerd" ? "ok" : ""}`}>{STATUS_LABEL[l.status]}</span>
-        <LunchButtons id={l.id} kind={kind} />
+        <LunchButtons id={l.id} kind={kind} options={options} mySlots={mySlots} />
       </div>
     );
   }

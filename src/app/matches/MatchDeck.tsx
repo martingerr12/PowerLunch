@@ -2,14 +2,19 @@
 
 import { useState, useTransition } from "react";
 import Avatar from "@/components/Avatar";
+import SlotPicker from "@/components/SlotPicker";
 import { PROMPTS } from "@/lib/config";
 import { formatSlot } from "@/lib/time";
 import type { Candidate } from "@/lib/types";
 import { proposeLunch, skipProfile } from "./actions";
 
-export default function MatchDeck({ deck, myTopics, mySector }: { deck: Candidate[]; myTopics: string[]; mySector: string | null }) {
+export default function MatchDeck({ deck, myTopics, mySector, mySlots, options }: {
+  deck: Candidate[]; myTopics: string[]; mySector: string | null; mySlots: string[]; options: string[];
+}) {
   const [idx, setIdx] = useState(0);
   const [slot, setSlot] = useState<string | null>(null);
+  const [altOpen, setAltOpen] = useState(false);
+  const [altSlot, setAltSlot] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const p = deck[idx];
@@ -23,12 +28,16 @@ export default function MatchDeck({ deck, myTopics, mySector }: { deck: Candidat
     );
   }
 
-  const chosen = slot && p.slots.includes(slot) ? slot : p.slots[0];
+  // Gezamenlijk moment, of een zelf gekozen ander moment.
+  const useAlt = altOpen || !p.slots.length;
+  const chosen = useAlt ? altSlot || null : slot && p.slots.includes(slot) ? slot : p.slots[0];
   const prompts = [p.prompt_1, p.prompt_2];
 
   function advance() {
     setIdx(idx + 1);
     setSlot(null);
+    setAltOpen(false);
+    setAltSlot("");
   }
   function skip() {
     start(async () => {
@@ -42,7 +51,12 @@ export default function MatchDeck({ deck, myTopics, mySector }: { deck: Candidat
     start(async () => {
       const res = await proposeLunch(p.id, chosen, promptIndex);
       if (res?.error) return setMsg(res.error);
-      setMsg(`Voorstel verstuurd aan ${p.name.split(" ")[0]} voor ${formatSlot(chosen)}. Zodra die akkoord is, kiezen we het restaurant.`);
+      const first = p.name.split(" ")[0];
+      setMsg(
+        p.slots.includes(chosen)
+          ? `Voorstel verstuurd aan ${first} voor ${formatSlot(chosen)}. Zodra die akkoord is, kiezen we het restaurant.`
+          : `Voorstel verstuurd aan ${first} voor ${formatSlot(chosen)}. Dit moment staat niet in diens agenda; ${first} kan akkoord gaan of een ander moment voorstellen.`,
+      );
       advance();
     });
   }
@@ -89,7 +103,7 @@ export default function MatchDeck({ deck, myTopics, mySector }: { deck: Candidat
             <div className="overlap">
               {p.slots.length ? (
                 p.slots.slice(0, 8).map((s) => (
-                  <button key={s} className={`tg ${s === chosen ? "match" : ""}`} onClick={() => setSlot(s)}>
+                  <button key={s} className={`tg ${!useAlt && s === chosen ? "match" : ""}`} onClick={() => { setSlot(s); setAltOpen(false); }}>
                     {formatSlot(s, true)}
                   </button>
                 ))
@@ -97,6 +111,17 @@ export default function MatchDeck({ deck, myTopics, mySector }: { deck: Candidat
                 <span className="tg">Nog geen overlap in jullie agenda&apos;s</span>
               )}
             </div>
+            {useAlt ? (
+              <div className="alt-slot">
+                <p>Kies een ander moment. {p.name.split(" ")[0]} kan akkoord gaan of zelf een nieuw moment voorstellen.</p>
+                <SlotPicker value={altSlot} onChange={setAltSlot} options={options} preferred={mySlots} />
+                {p.slots.length > 0 && (
+                  <button className="alt" style={{ marginTop: 0 }} onClick={() => setAltOpen(false)}>← Terug naar gezamenlijke momenten</button>
+                )}
+              </div>
+            ) : (
+              <button className="alt" onClick={() => setAltOpen(true)}>Ander moment voorstellen</button>
+            )}
           </div>
         </div>
       </div>
@@ -105,7 +130,7 @@ export default function MatchDeck({ deck, myTopics, mySector }: { deck: Candidat
           Overslaan
         </button>
         <button className="pill green big" disabled={pending || !chosen} onClick={() => propose(null)}>
-          {chosen ? `Lunch voorstellen · ${formatSlot(chosen, true)}` : "Geen gezamenlijk moment"}
+          {chosen ? `Lunch voorstellen · ${formatSlot(chosen, true)}` : "Kies eerst een moment"}
         </button>
       </div>
     </>

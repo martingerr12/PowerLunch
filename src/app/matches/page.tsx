@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { scoreCandidate } from "@/lib/matching";
+import { allSlots } from "@/lib/time";
 import type { OwnProfile, PublicProfile } from "@/lib/types";
 import MatchDeck from "./MatchDeck";
 
@@ -46,7 +47,7 @@ export default async function MatchesPage() {
             <p>Gesorteerd op gedeelde onderwerpen, branche en overlappende lunchmomenten.</p>
           </div>
         </div>
-        <MatchDeck deck={deck} myTopics={me.topics} mySector={me.sector} />
+        <MatchDeck deck={deck} myTopics={me.topics} mySector={me.sector} mySlots={[...mySlots]} options={allSlots()} />
       </div>
       <aside className="side">
         <div className="panel">

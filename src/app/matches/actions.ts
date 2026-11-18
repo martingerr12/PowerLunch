@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { allSlots } from "@/lib/time";
 
 export async function skipProfile(otherId: string) {
   const supabase = await createClient();
@@ -16,14 +17,10 @@ export async function proposeLunch(otherId: string, startsAt: string, promptInde
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Log opnieuw in." };
 
-  // Controleer dat het tijdslot echt bij beide in de agenda staat.
+  // Elk lunchmoment in de komende weken mag; staat het niet in de agenda van de ander,
+  // dan kan die akkoord gaan of een ander moment voorstellen.
   const iso = new Date(startsAt).toISOString();
-  const { data: both } = await supabase
-    .from("availability")
-    .select("user_id")
-    .eq("starts_at", iso)
-    .in("user_id", [user.id, otherId]);
-  if ((both ?? []).length < 2) return { error: "Dit moment is niet meer beschikbaar." };
+  if (!allSlots().includes(iso)) return { error: "Kies een lunchmoment in de komende drie weken." };
 
   // Geen dubbele openstaande voorstellen tussen dezelfde twee mensen.
   const { data: open } = await supabase
