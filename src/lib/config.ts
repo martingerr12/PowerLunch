@@ -34,6 +34,19 @@ export const SECTOR_SUGGESTIONS: Record<string, string[]> = {
   "Overheid & non-profit": ["Energie & duurzaamheid", "Zakelijke dienstverlening", "Tech & SaaS"],
 };
 
+// Voorgestelde onderwerpen op basis van de eigen branche.
+export const TOPIC_SUGGESTIONS: Record<string, string[]> = {
+  "Media & marketing": ["Marketing & brand", "Podcasts & media", "B2B-sales", "Partnerships"],
+  "Financiële dienstverlening": ["Fintech", "Fundraising", "Exit & overname", "Leiderschap"],
+  "Tech & SaaS": ["AI in de praktijk", "Fundraising", "Internationaal opschalen", "Hiring & cultuur"],
+  "Retail & e-commerce": ["E-commerce", "Marketing & brand", "Internationaal opschalen", "Duurzaamheid"],
+  "Vastgoed & bouw": ["Vastgoed", "Duurzaamheid", "Partnerships", "Leiderschap"],
+  "Energie & duurzaamheid": ["Duurzaamheid", "Overheid & aanbesteding", "Partnerships", "Fundraising"],
+  "Industrie & logistiek": ["AI in de praktijk", "Internationaal opschalen", "Duurzaamheid", "Hiring & cultuur"],
+  "Zakelijke dienstverlening": ["B2B-sales", "Leiderschap", "Hiring & cultuur", "AI in de praktijk"],
+  "Overheid & non-profit": ["Overheid & aanbesteding", "Duurzaamheid", "Leiderschap", "Partnerships"],
+};
+
 export const TOPICS = [
   "Fundraising", "Bootstrappen", "B2B-sales", "Marketing & brand", "Podcasts & media",
   "AI in de praktijk", "Hiring & cultuur", "Internationaal opschalen", "Exit & overname",

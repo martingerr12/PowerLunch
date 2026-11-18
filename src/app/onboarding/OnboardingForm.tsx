@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import {
-  ACTIVE_CITIES, DIETS, GOALS, LUNCH_TIMES, MAX_TOPICS, PROMPTS, SECTORS, SECTOR_SUGGESTIONS, TOPICS,
+  ACTIVE_CITIES, DIETS, GOALS, LUNCH_TIMES, MAX_TOPICS, PROMPTS, SECTORS, SECTOR_SUGGESTIONS, TOPIC_SUGGESTIONS, TOPICS,
 } from "@/lib/config";
 import { slotIso, upcomingDays } from "@/lib/time";
 import type { OwnProfile } from "@/lib/types";
@@ -15,11 +15,13 @@ function toggle<T>(arr: T[], v: T): T[] {
   return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
 }
 
-export default function OnboardingForm({ profile, slots: initialSlots }: { profile: OwnProfile | null; slots: string[] }) {
+type Prefill = { name: string; company: string; picture: string | null };
+
+export default function OnboardingForm({ prefill, profile, slots: initialSlots }: { prefill: Prefill; profile: OwnProfile | null; slots: string[] }) {
   const [step, setStep] = useState(0);
-  const [name, setName] = useState(profile?.name ?? "");
+  const [name, setName] = useState(prefill.name);
   const [role, setRole] = useState(profile?.role ?? "");
-  const [company, setCompany] = useState(profile?.company ?? "");
+  const [company, setCompany] = useState(prefill.company);
   const [sector, setSector] = useState(profile?.sector ?? "");
   const [city, setCity] = useState<string>(profile?.city ?? ACTIVE_CITIES[0]);
   const [targets, setTargets] = useState<string[]>(profile?.target_sectors ?? []);
@@ -29,6 +31,7 @@ export default function OnboardingForm({ profile, slots: initialSlots }: { profi
   const [suggestedFor, setSuggestedFor] = useState<string | null>(profile?.target_sectors?.length ? profile.sector : null);
   const [newSector, setNewSector] = useState("");
   const [topics, setTopics] = useState<string[]>(profile?.topics ?? []);
+  const [topicsFor, setTopicsFor] = useState<string | null>(profile?.topics?.length ? profile.sector : null);
   const [goals, setGoals] = useState<string[]>(profile?.goals ?? []);
   const [slots, setSlots] = useState<string[]>(initialSlots);
   const [week, setWeek] = useState(0);
@@ -42,6 +45,11 @@ export default function OnboardingForm({ profile, slots: initialSlots }: { profi
 
   const days = useMemo(() => upcomingDays(), []);
   const suggested = SECTOR_SUGGESTIONS[sector] ?? [];
+  // Onderwerpsuggesties: eerst je eigen branche, aangevuld met de branches die je zoekt.
+  const suggestedTopics = [...new Set([
+    ...(TOPIC_SUGGESTIONS[sector] ?? []),
+    ...targets.flatMap((t) => (TOPIC_SUGGESTIONS[t] ?? []).slice(0, 1)),
+  ])].slice(0, 6);
 
   const valid = [
     !!name.trim() && !!role.trim() && !!sector,
@@ -57,6 +65,10 @@ export default function OnboardingForm({ profile, slots: initialSlots }: { profi
     if (step === 0 && sector && suggestedFor !== sector) {
       setTargets(SECTOR_SUGGESTIONS[sector] ?? []);
       setSuggestedFor(sector);
+    }
+    if (step === 1 && topicsFor !== sector) {
+      setTopics(suggestedTopics.slice(0, 3));
+      setTopicsFor(sector);
     }
     if (step < STEPS - 1) return setStep(step + 1);
     setError(null);
@@ -101,7 +113,13 @@ export default function OnboardingForm({ profile, slots: initialSlots }: { profi
         <div className="q active">
           <div className="kicker">Stap 1 van {STEPS}</div>
           <h2 className="serif">Wie schuift er aan tafel?</h2>
-          <p className="sub">Kort en zakelijk. Dit zien je matches als eerste.</p>
+          <p className="sub">
+            {prefill.name ? "Je naam en foto komen uit LinkedIn. " : ""}Vul je functie en branche aan; dit zien je matches als eerste.
+          </p>
+          {prefill.picture && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={prefill.picture} alt="" className="avimg" style={{ width: 64, height: 64, marginBottom: 16 }} />
+          )}
           <div className="row2">
             <div className="field"><label>Naam</label><input value={name} onChange={(e) => setName(e.target.value)} /></div>
             <div className="field"><label>Functie</label><input value={role} onChange={(e) => setRole(e.target.value)} placeholder="bijv. Founder" /></div>
@@ -154,15 +172,17 @@ export default function OnboardingForm({ profile, slots: initialSlots }: { profi
         <div className="q active">
           <div className="kicker">Stap 3 van {STEPS}</div>
           <h2 className="serif">Waarover wil je netwerken?</h2>
-          <p className="sub">Kies 1 tot {MAX_TOPICS} onderwerpen. Hoe specifieker, hoe beter de match.</p>
+          <p className="sub">
+            We hebben er alvast een paar gekozen op basis van je branche{sector ? ` (${sector})` : ""}. Kies 1 tot {MAX_TOPICS}.
+          </p>
           <div className="chips">
-            {TOPICS.map((t) => (
+            {[...suggestedTopics, ...TOPICS.filter((t) => !suggestedTopics.includes(t))].map((t) => (
               <button
                 key={t}
                 className={`chip ${topics.includes(t) ? "on" : ""}`}
                 onClick={() => (topics.includes(t) || topics.length < MAX_TOPICS) && setTopics(toggle(topics, t))}
               >
-                {t}
+                {t}{suggestedTopics.includes(t) && <span className="sug">✦ suggestie</span>}
               </button>
             ))}
           </div>
