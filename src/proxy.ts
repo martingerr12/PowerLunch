@@ -4,6 +4,24 @@ import { NextResponse, type NextRequest } from "next/server";
 const PROTECTED = ["/onboarding", "/matches", "/lunches"];
 
 export async function proxy(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+
+  // Supabase stuurt na het inloggen soms terug naar de Site URL (bijv. "/?code=…")
+  // in plaats van naar /auth/callback. Vang dat hier op.
+  if (pathname !== "/auth/callback" && searchParams.has("code")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    return NextResponse.redirect(url);
+  }
+  // Foutmelding van Supabase of LinkedIn: toon die op de inlogpagina.
+  const authError = searchParams.get("error_description") ?? searchParams.get("error");
+  if (authError && pathname !== "/login") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = `?fout=${encodeURIComponent(authError)}`;
+    return NextResponse.redirect(url);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -31,8 +49,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
-  if (!user && PROTECTED.some((p) => path.startsWith(p))) {
+  if (!user && PROTECTED.some((p) => pathname.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

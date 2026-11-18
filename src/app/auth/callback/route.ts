@@ -16,6 +16,9 @@ export async function GET(request: Request) {
         .single();
       return NextResponse.redirect(`${origin}${profile?.onboarded ? "/matches" : "/onboarding"}`);
     }
+    return NextResponse.redirect(
+      `${origin}/login?fout=${encodeURIComponent(error?.message ?? "Sessie kon niet worden aangemaakt")}`,
+    );
   }
-  return NextResponse.redirect(`${origin}/login?fout=1`);
+  return NextResponse.redirect(`${origin}/login?fout=${encodeURIComponent("Geen inlogcode ontvangen")}`);
 }

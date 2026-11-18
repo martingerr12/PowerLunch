@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const fout = new URLSearchParams(window.location.search).get("fout");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (fout) setError(`Inloggen is niet gelukt: ${fout}`);
+  }, []);
 
   async function signIn() {
     setBusy(true);
